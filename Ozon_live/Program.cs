@@ -15,7 +15,8 @@ var pathToFile = AppDomain.CurrentDomain.BaseDirectory + '\\';
 ChromeOptions options = new ChromeOptions();
 options.AddArgument("--disable-blink-features=AutomationControlled");
 options.AddArgument("--headless");
-options.AddArgument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.5563.147 Safari/537.36");
+options.AddArgument(
+    "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.5563.147 Safari/537.36");
 
 IWebDriver driver = new ChromeDriver(pathToFile, options);
 
@@ -26,17 +27,40 @@ driver.Navigate().GoToUrl("https://www.ozon.ru/api/entrypoint-api.bx/page/json/v
                           "&layout_container=categorySearchMegapagination" +
                           "&layout_page_index=2&page=2");
 
-
+Thread.Sleep(1000);
 var test = driver.FindElement(By.TagName("pre"));
 
-
 var step1 = JsonConvert.DeserializeObject<JObject>(test.Text);
-var globalJsonObject = JObject.Parse(step1.ToString());
-var widgetState = (JObject)globalJsonObject["widgetStates"];
-var searchResultsPropertyName = widgetState.Properties().FirstOrDefault(x=>x.Name.Contains("searchResults")).Name;
-var searchResultsItem = JObject.Parse(widgetState[searchResultsPropertyName].ToString());
+var globalJsonObject = JObject.Parse(step1?.ToString()!);
+var widgetState = (JObject) globalJsonObject["widgetStates"]!;
+var searchResultsPropertyName = widgetState.Properties().FirstOrDefault(x => x.Name.Contains("searchResultsV2"))?.Name;
+var searchResultsItem = JObject.Parse(widgetState[searchResultsPropertyName!]?.ToString()!);
+var items = searchResultsItem["items"];
+foreach (var item in items!)
+{
+    var mainState = item["mainState"];
+    var itemRoots = mainState?.ToObject<List<Root>>();
+    var atoms = itemRoots!
+        .Select(p => p.Atom).ToList();
 
-Console.WriteLine(searchResultsItem["items"]);
+    var finalPrice = atoms.FirstOrDefault(x => x?.PriceWithTitle?.PriceItem != null)?.PriceWithTitle?.PriceItem;
+    var originalPrice = finalPrice;
+    if (finalPrice == null)
+    {
+        var price = atoms.FirstOrDefault(x => x?.Price?.PriceItem != null);
+        finalPrice = price?.Price?.PriceItem;
+        originalPrice = price?.Price?.OriginalPrice;
+    }
+    
+    var name = atoms.FirstOrDefault(x => x?.TextAtom?.Text != null)?.TextAtom?.Text;
+    var info = atoms.FirstOrDefault(x => x?.LabelList != null)?.LabelList?.Items?.Select(x => x.Title);
+    var infoString = string.Join(", ", info?.Select(x => x?.Trim()).ToList()!);
+    
+}
+
+;
+
+Console.WriteLine();
 
 Console.ReadKey();
 

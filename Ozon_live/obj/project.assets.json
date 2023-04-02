@@ -122,25 +122,29 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\User\\.nuget\\packages\\": {}
+    "C:\\Users\\Family\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "D:\\source\\repos\\Parser\\Ozon_live\\Ozon_live.csproj",
+      "projectUniqueName": "F:\\MyProducts\\Ozon_live\\Parser\\Ozon_live\\Ozon_live.csproj",
       "projectName": "Ozon_live",
-      "projectPath": "D:\\source\\repos\\Parser\\Ozon_live\\Ozon_live.csproj",
-      "packagesPath": "C:\\Users\\User\\.nuget\\packages\\",
-      "outputPath": "D:\\source\\repos\\Parser\\Ozon_live\\obj\\",
+      "projectPath": "F:\\MyProducts\\Ozon_live\\Parser\\Ozon_live\\Ozon_live.csproj",
+      "packagesPath": "C:\\Users\\Family\\.nuget\\packages\\",
+      "outputPath": "F:\\MyProducts\\Ozon_live\\Parser\\Ozon_live\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "C:\\Users\\User\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        "C:\\Users\\Family\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
       "originalTargetFrameworks": [
         "net6.0"
       ],
       "sources": {
-        "https://api.nuget.org/v3/index.json": {}
+        "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+        "https://api.nuget.org/v3/index.json": {},
+        "https://nuget.devexpress.com/HkMPKkNFiBnVkrEgCWsDH6ZaNdXDIGhx3wPqODyxKTNCk495JK/api": {},
+        "https://nuget.telerik.com/v3/index.json": {}
       },
       "frameworks": {
         "net6.0": {
@@ -177,8 +181,7 @@
           "net47",
           "net471",
           "net472",
-          "net48",
-          "net481"
+          "net48"
         ],
         "assetTargetFallback": true,
         "warn": true,
@@ -187,7 +190,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\6.0.403\\RuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\6.0.201\\RuntimeIdentifierGraph.json"
       }
     }
   }

@@ -1,12 +1,12 @@
 {
   "version": 2,
-  "dgSpecHash": "sMcT45SSehIMnvz8TOEW57o5NnOKOHVdMhv+SSUcGe/25L/wiu0zJCLeRKYbuzlPmVFGCS7zYREQktybZ6ga7w==",
+  "dgSpecHash": "NyCmd6UDjD+1VAaQ5VpizZarb1leBsaUF8dqp8bEF5QJJMmAJNhFLhMOLJ8hdJ9bjJyRN0sBB61T5ewwdOWSPQ==",
   "success": true,
-  "projectFilePath": "D:\\source\\repos\\Parser\\Ozon_live\\Ozon_live.csproj",
+  "projectFilePath": "F:\\MyProducts\\Ozon_live\\Parser\\Ozon_live\\Ozon_live.csproj",
   "expectedPackageFiles": [
-    "C:\\Users\\User\\.nuget\\packages\\newtonsoft.json\\13.0.3\\newtonsoft.json.13.0.3.nupkg.sha512",
-    "C:\\Users\\User\\.nuget\\packages\\selenium.webdriver\\4.8.2\\selenium.webdriver.4.8.2.nupkg.sha512",
-    "C:\\Users\\User\\.nuget\\packages\\selenium.webdriver.chromedriver\\111.0.5563.6400\\selenium.webdriver.chromedriver.111.0.5563.6400.nupkg.sha512"
+    "C:\\Users\\Family\\.nuget\\packages\\newtonsoft.json\\13.0.3\\newtonsoft.json.13.0.3.nupkg.sha512",
+    "C:\\Users\\Family\\.nuget\\packages\\selenium.webdriver\\4.8.2\\selenium.webdriver.4.8.2.nupkg.sha512",
+    "C:\\Users\\Family\\.nuget\\packages\\selenium.webdriver.chromedriver\\111.0.5563.6400\\selenium.webdriver.chromedriver.111.0.5563.6400.nupkg.sha512"
   ],
   "logs": []
 }
