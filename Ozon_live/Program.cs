@@ -3,29 +3,19 @@
 using OpenQA.Selenium;
 using Ozon_live;
 
-try
-{
-    var counter = 1;
-    var dataHelper = new DataHelper();
-    dataHelper.InitializationDriver();
-    var tasks = new List<Task>();
-    var cts = new CancellationTokenSource();
-    while (counter < 130)
-    {
-        tasks.Add(dataHelper.ParsePageAsync(counter, cts).CancelOnFaulted(cts));
-        counter++;
-    }
 
-    await Task.WhenAny(tasks);
-}
-catch (NoSuchElementException)
+var counter = 1;
+var dataHelper = new DataHelper();
+dataHelper.InitializationDriver();
+var tasks = new List<Task>();
+var cts = new CancellationTokenSource();
+while (counter < 130)
 {
-    Console.WriteLine("Общий алгоритм завершил работу с последней страницей");
+    tasks.Add(dataHelper.ParsePageAsync(counter, cts).CancelOnFaulted(cts));
+    counter++;
 }
-catch (Exception e)
-{
-    Console.WriteLine("Общий алгоритм с ошибкой");
-}
+
+await Task.WhenAny(tasks);
 
 
 Console.ReadKey();
