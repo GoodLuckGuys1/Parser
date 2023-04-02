@@ -1,6 +1,5 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
-
 using OpenQA.Selenium;
 using Ozon_live;
 
@@ -11,7 +10,7 @@ try
     dataHelper.InitializationDriver();
     var tasks = new List<Task>();
     var cts = new CancellationTokenSource();
-    while (counter < 120)
+    while (counter < 130)
     {
         tasks.Add(dataHelper.ParsePageAsync(counter, cts).CancelOnFaulted(cts));
         counter++;
