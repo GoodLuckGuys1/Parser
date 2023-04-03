@@ -2,6 +2,8 @@
 
 public class OutputData
 {
+    public string NumberSearchResult { get; set; } = null!;
+    public string IdGood { get; set; } = null!;
     public string NamePosition { get; set; } = null!;
 
     public string CurrentPrice { get; set; } = null!;

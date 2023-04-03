@@ -7,7 +7,13 @@ namespace Ozon_live;
 
 public class DataHelper
 {
-    private IWebDriver _driver;
+    private IWebDriver _driver = null!;
+    private readonly Guid _guidSession = Guid.NewGuid();
+
+    public DataHelper()
+    {
+        Console.WriteLine($"Create session with GUID - {_guidSession}");
+    }
 
     public void InitializationDriver()
     {
@@ -37,7 +43,7 @@ public class DataHelper
                                        "&layout_container=categorySearchMegapagination" +
                                        $"&layout_page_index={pageIndex}&page={pageIndex}");
 
-            Thread.Sleep(100);
+            Thread.Sleep(80);
 
             var items = ParceStartData();
             var counterReload = 1;
@@ -57,14 +63,21 @@ public class DataHelper
             }
 
             var outputData = new List<OutputData>();
+            var numberSearchResult = pageIndex == 1 ? 1 : (pageIndex - 1) * 36;
             foreach (var item in items!)
             {
+                var output = new OutputData();
+
                 var mainState = item["mainState"];
+                var idGood = item["multiButton"]?["ozonButton"]?["addToCartButtonWithQuantity"]?["action"]?["id"]
+                                 ?.ToString() ??
+                             item["multiButton"]?["expressButton"]?["addToCartButtonWithQuantity"]?["action"]?["id"]
+                                 ?.ToString();
+                output.IdGood = idGood!;
                 var itemRoots = mainState?.ToObject<List<Root>>();
                 var atoms = itemRoots!
                     .Select(p => p.Atom).ToList();
 
-                var output = new OutputData();
 
                 var finalPrice = atoms.FirstOrDefault(x => x?.PriceWithTitle?.PriceItem != null)?.PriceWithTitle
                     ?.PriceItem;
@@ -80,7 +93,7 @@ public class DataHelper
                     output.OriginalPrice = output.CurrentPrice = finalPrice;
                 }
 
-                output.NamePosition = atoms.FirstOrDefault(x => x?.TextAtom?.Text != null)?.TextAtom?.Text!;
+                output.NamePosition = atoms.FirstOrDefault(x => x?.TextAtom?.Text != null)?.TextAtom?.Text?.Replace("&#x2", "")!;
 
                 var listInfo = atoms.LastOrDefault(x => x?.LabelList != null)?.LabelList?.Items;
 
@@ -90,10 +103,12 @@ public class DataHelper
                     output.Discription = string.Join(", ", info.ToList()!);
                 }
 
+                output.NumberSearchResult = numberSearchResult.ToString();
                 outputData.Add(output);
+                numberSearchResult++;
             }
 
-            await new Writer().WriteToExcell($"page_{pageIndex}", outputData);
+            await new Writer().WriteToExcell($"{nameRequest}_{_guidSession}", $"page_{pageIndex}", outputData);
             Console.WriteLine($"Конец работы со страницей {pageIndex}");
             return await Task.Run(() => true);
         }
