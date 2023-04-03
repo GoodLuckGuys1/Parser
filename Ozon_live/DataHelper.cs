@@ -22,30 +22,41 @@ public class DataHelper
         _driver = new ChromeDriver(pathToFile, options);
     }
 
-    public async Task<bool> ParsePageAsync(int pageIndex, CancellationTokenSource cts)
+    public async Task<bool> ParsePageAsync(int pageIndex, string nameRequest, int maxCountReloadDriver,
+        CancellationTokenSource cts)
     {
         cts.Token.ThrowIfCancellationRequested();
         try
         {
-            if (pageIndex == 5)
-                ;
-            Console.WriteLine($"Начало работы с {pageIndex}");
+            Console.WriteLine($"Начало работы со страницей {pageIndex}");
 
             _driver.Navigate().GoToUrl("https://www.ozon.ru/api/entrypoint-api.bx/page/json/v2?url=" +
                                        "/search/?deny_category_prediction=true&from_global=true&" +
-                                       "text=%D0%B2%D0%B0%D0%BA%D1%83%D1%83%D0%BC%D0%B0%D1%82%D0%BE%D1%80" +
+                                       $"text={nameRequest}" +
                                        "&page_changed=true" +
                                        "&layout_container=categorySearchMegapagination" +
                                        $"&layout_page_index={pageIndex}&page={pageIndex}");
 
-            Thread.Sleep(300);
+            Thread.Sleep(100);
 
             var items = ParceStartData();
-            if (items == null)
+            var counterReload = 1;
+            while (items == null && counterReload <= maxCountReloadDriver)
             {
+                Console.WriteLine(
+                    $"Задержка загрузки данных со страницы {pageIndex}, перезагрузка драйвера. Попытка {counterReload} из {maxCountReloadDriver}");
                 items = ParceStartData(true, pageIndex);
+                counterReload++;
             }
 
+            if (items == null)
+            {
+                Console.WriteLine(
+                    $"Не удалось получить запрос с {maxCountReloadDriver} попыток от сервера, страница {pageIndex} не обработана");
+                return false;
+            }
+
+            var outputData = new List<OutputData>();
             foreach (var item in items!)
             {
                 var mainState = item["mainState"];
@@ -53,54 +64,66 @@ public class DataHelper
                 var atoms = itemRoots!
                     .Select(p => p.Atom).ToList();
 
+                var output = new OutputData();
+
                 var finalPrice = atoms.FirstOrDefault(x => x?.PriceWithTitle?.PriceItem != null)?.PriceWithTitle
                     ?.PriceItem;
-                var originalPrice = finalPrice;
+
                 if (finalPrice == null)
                 {
                     var price = atoms.FirstOrDefault(x => x?.Price?.PriceItem != null);
-                    finalPrice = price?.Price?.PriceItem;
-                    originalPrice = price?.Price?.OriginalPrice;
+                    output.CurrentPrice = price?.Price?.PriceItem!;
+                    output.OriginalPrice = price?.Price?.OriginalPrice!;
+                }
+                else
+                {
+                    output.OriginalPrice = output.CurrentPrice = finalPrice;
                 }
 
-                var name = atoms.FirstOrDefault(x => x?.TextAtom?.Text != null)?.TextAtom?.Text;
+                output.NamePosition = atoms.FirstOrDefault(x => x?.TextAtom?.Text != null)?.TextAtom?.Text!;
+
                 var listInfo = atoms.LastOrDefault(x => x?.LabelList != null)?.LabelList?.Items;
 
-                if (listInfo == null) continue;
+                if (listInfo != null)
+                {
+                    var info = listInfo.Select(x => x.Title);
+                    output.Discription = string.Join(", ", info.ToList()!);
+                }
 
-                var info = listInfo.Select(x => x.Title);
-                var infoString = string.Join(", ", info.ToList()!);
+                outputData.Add(output);
             }
 
-            Console.WriteLine($"Конец работы с {pageIndex}");
+            await new Writer().WriteToExcell($"page_{pageIndex}", outputData);
+            Console.WriteLine($"Конец работы со страницей {pageIndex}");
             return await Task.Run(() => true);
         }
         catch (NoSuchElementException)
         {
-            Console.WriteLine($"Конец работы с {pageIndex} - последняя страница");
+            Console.WriteLine($"Конец работы со страницей {pageIndex} - последняя страница");
             cts.Cancel();
             throw;
         }
         catch (Exception e)
         {
-            Console.WriteLine($"Конец работы с {pageIndex} c ошибкой");
+            Console.WriteLine($"Конец работы со страницей {pageIndex} c ошибкой");
             Console.WriteLine(e);
             throw;
         }
     }
 
-    private JToken ParceStartData(bool newDriver = false, int pageIndex = 0)
+    private JToken? ParceStartData(bool newDriver = false, int pageIndex = 0)
     {
         if (newDriver)
         {
             InitializationDriver();
+            Thread.Sleep(500);
             _driver.Navigate().GoToUrl("https://www.ozon.ru/api/entrypoint-api.bx/page/json/v2?url=" +
                                        "/search/?deny_category_prediction=true&from_global=true&" +
                                        "text=%D0%B2%D0%B0%D0%BA%D1%83%D1%83%D0%BC%D0%B0%D1%82%D0%BE%D1%80" +
                                        "&page_changed=true" +
                                        "&layout_container=categorySearchMegapagination" +
                                        $"&layout_page_index={pageIndex}&page={pageIndex}");
-            Thread.Sleep(500);
+            Thread.Sleep(1000);
         }
 
         var test = _driver.FindElement(By.TagName("pre"));
@@ -111,6 +134,6 @@ public class DataHelper
         var searchResultsPropertyName =
             widgetState.Properties().FirstOrDefault(x => x.Name.Contains("searchResultsV2"))?.Name;
         var searchResultsItem = JObject.Parse(widgetState[searchResultsPropertyName!]?.ToString()!);
-        return searchResultsItem["items"]!;
+        return searchResultsItem["items"];
     }
 }
