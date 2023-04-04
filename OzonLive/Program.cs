@@ -1,14 +1,9 @@
-﻿// See https://aka.ms/new-console-template for more information
-
-using System.Linq.Expressions;
-using OpenQA.Selenium;
+﻿using OpenQA.Selenium;
 using OzonLive;
 
 try
 {
-    bool isEnd = false;
-
-    while (!isEnd)
+    while (true)
     {
         Console.WriteLine("Введите ключевые слова для поиска::");
         var nameRequest = Console.ReadLine();
@@ -29,6 +24,8 @@ try
         while (!int.TryParse(maxNumber, out maxNumberInt))
         {
             Console.WriteLine("Введите номер максимальной страницы (default - до последней). Нажмите Enter для значения по умолчанию:");
+            maxNumber = Console.ReadLine();
+            if (string.IsNullOrEmpty(maxNumber)) maxNumber = "0";
         }
 
         Console.WriteLine("Введите максимальное количество попыток запроса (default - 10). Нажмите Enter для значения по умолчанию:");
@@ -42,6 +39,8 @@ try
         while (!int.TryParse(maxNumberReloadDriver, out maxNumberReloadDriverInt))
         {
             Console.WriteLine("Введите максимальное количество попыток запроса (default - 10). Нажмите Enter для значения по умолчанию:");
+            maxNumberReloadDriver = Console.ReadLine();
+            if (string.IsNullOrEmpty(maxNumberReloadDriver)) maxNumberReloadDriver = "10";
         }
 
         var counter = 1;
@@ -69,13 +68,21 @@ try
         }
         
         await Task.WhenAll(tasks);
+        
         Console.WriteLine("Программа завершила работу");
+        Console.WriteLine();
+        Console.WriteLine("Для нового поиска нажмите Enter");
+        Console.WriteLine();
         Console.ReadKey();
     }
 }
 catch (NoSuchElementException)
 {
     Console.WriteLine("Программа завершила работу с последней страницей");
+    Console.WriteLine();
+    Console.WriteLine();
+    Console.WriteLine("Для нового поиска нажмите Enter");
+    Console.WriteLine();
     Console.ReadKey();
 
 }
