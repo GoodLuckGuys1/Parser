@@ -1,11 +1,7 @@
-﻿using IronPython.Hosting;
-using Microsoft.Scripting.Hosting;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using Newtonsoft.Json.Linq;
-using Selenium.WebDriver.UndetectedChromeDriver;
-using SeleniumUndetectedChromeDriver;
 using UndetectedChromeDriver = SeleniumUndetectedChromeDriver.UndetectedChromeDriver;
 
 namespace OzonLive;
@@ -15,11 +11,8 @@ public class DataHelper
     private IWebDriver _driver = null!;
     private readonly Guid _guidSession = Guid.NewGuid();
     private bool _isProxy = false;
-    private List<string> _proxys = new List<string>()
-    {
-        "95.79.53.19:8080",
-        "5.158.126.16:3128"
-    };
+    private readonly List<string> _proxies = new List<string>();
+    private readonly string _pathToFile = AppDomain.CurrentDomain.BaseDirectory + '\\';
 
     public DataHelper()
     {
@@ -28,21 +21,22 @@ public class DataHelper
 
     public void InitializationDriver(bool isResetProxy)
     {
-        var pathToFile = AppDomain.CurrentDomain.BaseDirectory + '\\';
-
         var options = new ChromeOptions();
         options.AddArgument("--disable-blink-features=AutomationControlled");
 
         if (isResetProxy)
         {
-            options.AddArgument("--proxy-server=95.79.53.19:8080");
+            ReadProxyFromFile();
+            var rnd = new Random();
+            var proxy = _proxies.ElementAt(rnd.Next(_proxies.Count));
+            options.AddArgument($"--proxy-server={proxy}");
         }
 
         options.AddArgument(
             "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.5563.147 Safari/537.36");
 
         _driver = UndetectedChromeDriver.Create(
-            driverExecutablePath: $"{pathToFile}\\chromedriver.exe",
+            driverExecutablePath: $"{_pathToFile}\\chromedriver.exe",
             options: options
         );
     }
@@ -178,5 +172,24 @@ public class DataHelper
             widgetState.Properties().FirstOrDefault(x => x.Name.Contains("searchResultsV2"))?.Name;
         var searchResultsItem = JObject.Parse(widgetState[searchResultsPropertyName!]?.ToString()!);
         return searchResultsItem["items"];
+    }
+
+    private void ReadProxyFromFile()
+    {
+        
+        try
+        {
+            using var reader = new StreamReader($"{_pathToFile}\\proxiesList.txt");
+            var proxy = reader.ReadLine();
+            while (proxy !=  null)
+            {
+                _proxies.Add(proxy);
+                proxy = reader.ReadLine();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
+        }
     }
 }
