@@ -2,6 +2,7 @@
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using Newtonsoft.Json.Linq;
+using SeleniumUndetectedChromeDriver;
 
 namespace OzonLive;
 
@@ -15,8 +16,9 @@ public class DataHelper
         Console.WriteLine($"Create session with GUID - {_guidSession}");
     }
 
-    public void InitializationDriver()
+    public IWebDriver InitializationDriver()
     {
+        
         var pathToFile = AppDomain.CurrentDomain.BaseDirectory + '\\';
 
         var options = new ChromeOptions();
@@ -24,8 +26,11 @@ public class DataHelper
         options.AddArgument("--headless");
         options.AddArgument(
             "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.5563.147 Safari/537.36");
-
-        _driver = new ChromeDriver(pathToFile, options);
+        using var driver = UndetectedChromeDriver.Create(
+            browserExecutablePath: pathToFile,
+            options: options
+        );
+        return driver;
     }
 
     public async Task<bool> ParsePageAsync(int pageIndex, string nameRequest, int maxCountReloadDriver,
@@ -35,24 +40,16 @@ public class DataHelper
         try
         {
             Console.WriteLine($"Начало работы со страницей {pageIndex}");
-
             
-            _driver.Navigate().GoToUrl("https://www.ozon.ru/api/entrypoint-api.bx/page/json/v2?url=" +
-                                       "/search/?deny_category_prediction=true&from_global=true&" +
-                                       $"text={nameRequest}" +
-                                       "&page_changed=true" +
-                                       "&layout_container=categorySearchMegapagination" +
-                                       $"&layout_page_index={pageIndex}&page={pageIndex}");
+            var items = ParceStartData(pageIndex, nameRequest);
 
-            Thread.Sleep(1000);
-            
-            var items = ParceStartData();
             var counterReload = 1;
             while (items == null && counterReload <= maxCountReloadDriver)
             {
+                Thread.Sleep(500);
                 Console.WriteLine(
                     $"Задержка загрузки данных со страницы {pageIndex}, перезагрузка драйвера. Попытка {counterReload} из {maxCountReloadDriver}");
-                items = ParceStartData(true, pageIndex, nameRequest);
+                items = ParceStartData(pageIndex, nameRequest);
                 counterReload++;
             }
 
@@ -132,22 +129,20 @@ public class DataHelper
         }
     }
 
-    private JToken? ParceStartData(bool newDriver = false, int pageIndex = 0, string nameRequest = "")
+    private JToken? ParceStartData(int pageIndex = 0, string nameRequest = "")
     {
-        if (newDriver)
-        {
-            InitializationDriver();
-            Thread.Sleep(500);
-            _driver.Navigate().GoToUrl("https://www.ozon.ru/api/entrypoint-api.bx/page/json/v2?url=" +
-                                       "/search/?deny_category_prediction=true&from_global=true&" +
-                                        $"text={nameRequest}" +
-                                       "&page_changed=true" +
-                                       "&layout_container=categorySearchMegapagination" +
-                                       $"&layout_page_index={pageIndex}&page={pageIndex}");
-            Thread.Sleep(1000);
-        }
-
-        var test = _driver.FindElement(By.TagName("pre"));
+        using var driver = InitializationDriver();
+        
+        driver.Navigate().GoToUrl("https://www.ozon.ru/api/entrypoint-api.bx/page/json/v2?url=" +
+                                  "/search/?deny_category_prediction=true&from_global=true&" +
+                                  $"text={nameRequest}" +
+                                  "&page_changed=true" +
+                                  "&layout_container=categorySearchMegapagination" +
+                                  $"&layout_page_index={pageIndex}&page={pageIndex}");
+        
+        Thread.Sleep(100);
+        
+        var test = driver.FindElement(By.TagName("pre"));
 
         var step1 = JsonConvert.DeserializeObject<JObject>(test.Text);
         var globalJsonObject = JObject.Parse(step1?.ToString()!);
@@ -155,6 +150,7 @@ public class DataHelper
         var searchResultsPropertyName =
             widgetState.Properties().FirstOrDefault(x => x.Name.Contains("searchResultsV2"))?.Name;
         var searchResultsItem = JObject.Parse(widgetState[searchResultsPropertyName!]?.ToString()!);
+        driver.Close();
         return searchResultsItem["items"];
     }
 }
