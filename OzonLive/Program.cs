@@ -45,7 +45,7 @@ try
 
         var counter = 1;
         var dataHelper = new DataHelper();
-        dataHelper.InitializationDriver();
+        dataHelper.InitializationDriver(false);
         var tasks = new List<Task>();
         var cts = new CancellationTokenSource();
         if (maxNumberInt == 0)

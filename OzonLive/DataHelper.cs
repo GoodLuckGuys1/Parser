@@ -4,7 +4,9 @@ using Newtonsoft.Json;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using Newtonsoft.Json.Linq;
+using Selenium.WebDriver.UndetectedChromeDriver;
 using SeleniumUndetectedChromeDriver;
+using UndetectedChromeDriver = SeleniumUndetectedChromeDriver.UndetectedChromeDriver;
 
 namespace OzonLive;
 
@@ -12,32 +14,39 @@ public class DataHelper
 {
     private IWebDriver _driver = null!;
     private readonly Guid _guidSession = Guid.NewGuid();
+    private bool _isProxy = false;
+    private List<string> _proxys = new List<string>()
+    {
+        "95.79.53.19:8080",
+        "5.158.126.16:3128"
+    };
 
     public DataHelper()
     {
         Console.WriteLine($"Create session with GUID - {_guidSession}");
     }
 
-    public void InitializationDriver()
+    public void InitializationDriver(bool isResetProxy)
     {
         var pathToFile = AppDomain.CurrentDomain.BaseDirectory + '\\';
 
         var options = new ChromeOptions();
-        options.AddArgument("--disable-blink-features=AutomationControlled"); 
-        //options.AddArgument("--headless");
-        //options.AddArgument("--proxy-server=93.94.180.233:8080");
-        var proxy = new Proxy
+        options.AddArgument("--disable-blink-features=AutomationControlled");
+
+        if (isResetProxy)
         {
-            HttpProxy = "93.94.180.233:8080"
-        };
-        proxy.Kind = ProxyKind.Manual;
-        
-        options.Proxy = proxy;
+            options.AddArgument("--proxy-server=95.79.53.19:8080");
+        }
+
         options.AddArgument(
             "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.5563.147 Safari/537.36");
-        //options.AddArgument("ignore-certificate-errors");
-        _driver = new ChromeDriver(pathToFile, options);
+
+        _driver = UndetectedChromeDriver.Create(
+            driverExecutablePath: $"{pathToFile}\\chromedriver.exe",
+            options: options
+        );
     }
+
 
     public async Task<bool> ParsePageAsync(int pageIndex, string nameRequest, int maxCountReloadDriver,
         CancellationTokenSource cts)
@@ -46,8 +55,16 @@ public class DataHelper
         try
         {
             Console.WriteLine($"Начало работы со страницей {pageIndex}");
-            
+
             var items = ParceStartData(false, pageIndex, nameRequest);
+
+            if (pageIndex % 110 == 0)
+            {
+                _isProxy = !_isProxy;
+                _driver.Dispose();
+                InitializationDriver(_isProxy);
+                
+            }
 
             var counterReload = 1;
             while (items == null && counterReload <= maxCountReloadDriver)
@@ -140,7 +157,7 @@ public class DataHelper
         if (isNewDriver)
         {
             _driver.Dispose();
-            InitializationDriver();
+            InitializationDriver(false);
         }
 
         _driver.Navigate().GoToUrl("https://www.ozon.ru/api/entrypoint-api.bx/page/json/v2?url=" +
@@ -149,9 +166,9 @@ public class DataHelper
                                    "&page_changed=true" +
                                    "&layout_container=categorySearchMegapagination" +
                                    $"&layout_page_index={pageIndex}&page={pageIndex}");
-        
+
         Thread.Sleep(100);
-        
+
         var test = _driver.FindElement(By.TagName("pre"));
 
         var step1 = JsonConvert.DeserializeObject<JObject>(test.Text);
