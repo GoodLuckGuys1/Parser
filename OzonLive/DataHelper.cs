@@ -1,17 +1,13 @@
 ﻿using Newtonsoft.Json;
-
-using Newtonsoft.Json.Linq;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
-using Selenium.Extensions;
-using Selenium.WebDriver.UndetectedChromeDriver;
-using Sl.Selenium.Extensions.Chrome;
+using Newtonsoft.Json.Linq;
 
 namespace OzonLive;
 
 public class DataHelper
 {
-    private SlDriver _driver = null!;
+    private IWebDriver _driver = null!;
     private readonly Guid _guidSession = Guid.NewGuid();
 
     public DataHelper()
@@ -29,7 +25,7 @@ public class DataHelper
         options.AddArgument(
             "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.5563.147 Safari/537.36");
 
-        _driver = UndetectedChromeDriver.Instance(new ChromeDriverParameters());
+        _driver = new ChromeDriver(pathToFile, options);
     }
 
     public async Task<bool> ParsePageAsync(int pageIndex, string nameRequest, int maxCountReloadDriver,
@@ -40,20 +36,14 @@ public class DataHelper
         {
             Console.WriteLine($"Начало работы со страницей {pageIndex}");
 
-            if (pageIndex == 121)
-            {
-                Thread.Sleep(5000);
-            }
-            else
-            {
-                _driver.Navigate().GoToUrl("https://www.ozon.ru/api/entrypoint-api.bx/page/json/v2?url=" +
-                                           "/search/?deny_category_prediction=true&from_global=true&" +
-                                           $"text={nameRequest}" +
-                                           "&page_changed=true" +
-                                           "&layout_container=categorySearchMegapagination" +
-                                           $"&layout_page_index={pageIndex}&page={pageIndex}"); 
-            }
             
+            _driver.Navigate().GoToUrl("https://www.ozon.ru/api/entrypoint-api.bx/page/json/v2?url=" +
+                                       "/search/?deny_category_prediction=true&from_global=true&" +
+                                       $"text={nameRequest}" +
+                                       "&page_changed=true" +
+                                       "&layout_container=categorySearchMegapagination" +
+                                       $"&layout_page_index={pageIndex}&page={pageIndex}");
+
             Thread.Sleep(1000);
             
             var items = ParceStartData();
