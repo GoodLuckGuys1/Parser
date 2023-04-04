@@ -1,4 +1,6 @@
-﻿using Newtonsoft.Json;
+﻿using IronPython.Hosting;
+using Microsoft.Scripting.Hosting;
+using Newtonsoft.Json;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using Newtonsoft.Json.Linq;
@@ -16,21 +18,25 @@ public class DataHelper
         Console.WriteLine($"Create session with GUID - {_guidSession}");
     }
 
-    public IWebDriver InitializationDriver()
+    public void InitializationDriver()
     {
-        
         var pathToFile = AppDomain.CurrentDomain.BaseDirectory + '\\';
 
         var options = new ChromeOptions();
-        options.AddArgument("--disable-blink-features=AutomationControlled");
-        options.AddArgument("--headless");
+        options.AddArgument("--disable-blink-features=AutomationControlled"); 
+        //options.AddArgument("--headless");
+        //options.AddArgument("--proxy-server=93.94.180.233:8080");
+        var proxy = new Proxy
+        {
+            HttpProxy = "93.94.180.233:8080"
+        };
+        proxy.Kind = ProxyKind.Manual;
+        
+        options.Proxy = proxy;
         options.AddArgument(
             "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.5563.147 Safari/537.36");
-        using var driver = UndetectedChromeDriver.Create(
-            browserExecutablePath: pathToFile,
-            options: options
-        );
-        return driver;
+        //options.AddArgument("ignore-certificate-errors");
+        _driver = new ChromeDriver(pathToFile, options);
     }
 
     public async Task<bool> ParsePageAsync(int pageIndex, string nameRequest, int maxCountReloadDriver,
@@ -41,15 +47,15 @@ public class DataHelper
         {
             Console.WriteLine($"Начало работы со страницей {pageIndex}");
             
-            var items = ParceStartData(pageIndex, nameRequest);
+            var items = ParceStartData(false, pageIndex, nameRequest);
 
             var counterReload = 1;
             while (items == null && counterReload <= maxCountReloadDriver)
             {
-                Thread.Sleep(500);
+                Thread.Sleep(100);
                 Console.WriteLine(
                     $"Задержка загрузки данных со страницы {pageIndex}, перезагрузка драйвера. Попытка {counterReload} из {maxCountReloadDriver}");
-                items = ParceStartData(pageIndex, nameRequest);
+                items = ParceStartData(true, pageIndex, nameRequest);
                 counterReload++;
             }
 
@@ -129,20 +135,24 @@ public class DataHelper
         }
     }
 
-    private JToken? ParceStartData(int pageIndex = 0, string nameRequest = "")
+    private JToken? ParceStartData(bool isNewDriver, int pageIndex = 0, string nameRequest = "")
     {
-        using var driver = InitializationDriver();
-        
-        driver.Navigate().GoToUrl("https://www.ozon.ru/api/entrypoint-api.bx/page/json/v2?url=" +
-                                  "/search/?deny_category_prediction=true&from_global=true&" +
-                                  $"text={nameRequest}" +
-                                  "&page_changed=true" +
-                                  "&layout_container=categorySearchMegapagination" +
-                                  $"&layout_page_index={pageIndex}&page={pageIndex}");
+        if (isNewDriver)
+        {
+            _driver.Dispose();
+            InitializationDriver();
+        }
+
+        _driver.Navigate().GoToUrl("https://www.ozon.ru/api/entrypoint-api.bx/page/json/v2?url=" +
+                                   "/search/?deny_category_prediction=true&from_global=true&" +
+                                   $"text={nameRequest}" +
+                                   "&page_changed=true" +
+                                   "&layout_container=categorySearchMegapagination" +
+                                   $"&layout_page_index={pageIndex}&page={pageIndex}");
         
         Thread.Sleep(100);
         
-        var test = driver.FindElement(By.TagName("pre"));
+        var test = _driver.FindElement(By.TagName("pre"));
 
         var step1 = JsonConvert.DeserializeObject<JObject>(test.Text);
         var globalJsonObject = JObject.Parse(step1?.ToString()!);
@@ -150,7 +160,6 @@ public class DataHelper
         var searchResultsPropertyName =
             widgetState.Properties().FirstOrDefault(x => x.Name.Contains("searchResultsV2"))?.Name;
         var searchResultsItem = JObject.Parse(widgetState[searchResultsPropertyName!]?.ToString()!);
-        driver.Close();
         return searchResultsItem["items"];
     }
 }

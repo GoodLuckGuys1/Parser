@@ -10,6 +10,8 @@
 
     <ItemGroup>
       <PackageReference Include="EPPlus" Version="6.2.0" />
+      <PackageReference Include="IronPython" Version="3.4.0" />
+      <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.2.0" />
       <PackageReference Include="Microsoft.Office.Interop.Excel" Version="15.0.4795.1001" />
       <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
       <PackageReference Include="Selenium.UndetectedChromeDriver" Version="1.1.1" />
@@ -21,6 +23,10 @@
     <ItemGroup>
       <None Remove="chromedriver.exe" />
       <Resource Include="chromedriver.exe">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </Resource>
+      <None Remove="scrap.py" />
+      <Resource Include="scrap.py">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </Resource>
     </ItemGroup>
