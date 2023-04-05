@@ -25,30 +25,33 @@ public class DataHelper
     public void InitializationDriver()
     {
         var options = new ChromeOptions();
-        options.AddArgument("--disable-blink-features=AutomationControlled"); 
-        //options.AddArgument("--headless");
+        options.AddArgument("--headless");
+        options.AddArgument("--disable-gpu");
+        options.AddArgument("--disable-blink-features=AutomationControlled");
+
         if (_isProxy)
         {
             ReadProxyFromFile();
 
-            Console.WriteLine($"Работаем на proxy {_proxies[_counterProxy]}");
+            Console.WriteLine($"Проверяем {_proxies[_counterProxy]}");
 
             while (!HttpCheckerWorker(_proxies[_counterProxy]))
             {
+                Console.WriteLine($"Proxy {_proxies[_counterProxy]} не работает");
                 if (_counterProxy == _proxies.Count)
                 {
                     _counterProxy = 0;
                 }
 
-                Console.WriteLine($"Proxy {_proxies[_counterProxy]} не работает");
-                Console.WriteLine($"Переключаем прокси");
                 _counterProxy++;
-                Console.WriteLine($"Работаем на proxy {_proxies[_counterProxy]}");
+                
+                Console.WriteLine($"Переключаем прокси на {_proxies[_counterProxy]} и проверяем");
             }
 
-
+            Console.WriteLine($"Работаем на proxy {_proxies[_counterProxy]}");
             options.AddArgument($"--proxy-server={_proxies[_counterProxy]}");
             options.PageLoadStrategy = PageLoadStrategy.Normal;
+
             _counterProxy++;
         }
 
@@ -63,6 +66,7 @@ public class DataHelper
                 service.SuppressInitialDiagnosticInformation = true;
                 service.HideCommandPromptWindow = true;
             },
+            headless: true,
             options: options
         );
     }
@@ -208,13 +212,13 @@ public class DataHelper
                 Console.WriteLine("С этого proxy не приходят данные");
                 return ParceStartData(true, pageIndex, nameRequest);
             }
+
             return searchResultsItem["items"];
-            
         }
         catch
         {
-            ;
-            throw;
+            Console.WriteLine("С этого proxy не приходят нужные данные");
+            return ParceStartData(true, pageIndex, nameRequest);
         }
     }
 
@@ -244,7 +248,8 @@ public class DataHelper
             var checkerHttpRequest = new HttpRequest(); // Создаю запрос
             checkerHttpRequest.UserAgent = Http.ChromeUserAgent(); // Задаю параметр UserAgent
             checkerHttpRequest.KeepAlive = false;
-            checkerHttpRequest.ConnectTimeout = 1000; // Задаю Timeout подключения к ресурсу делёный на 2, так как таймаут подключения к прокси отдельный
+            checkerHttpRequest.ConnectTimeout =
+                1000; // Задаю Timeout подключения к ресурсу делёный на 2, так как таймаут подключения к прокси отдельный
             checkerHttpRequest.Proxy = HttpProxyClient.Parse(proxy); // Задаю прокси
             checkerHttpRequest.Proxy.ConnectTimeout = 1000; // Задаю Timeout подключения к прокси
             checkerHttpRequest.IgnoreProtocolErrors = true;
