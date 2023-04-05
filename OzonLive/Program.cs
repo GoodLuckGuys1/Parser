@@ -70,19 +70,12 @@ try
         await Task.WhenAll(tasks);
         
         Console.WriteLine("Программа завершила работу");
-        Console.WriteLine();
-        Console.WriteLine("Для нового поиска нажмите Enter");
-        Console.WriteLine();
         Console.ReadKey();
     }
 }
 catch (NoSuchElementException)
 {
     Console.WriteLine("Программа завершила работу с последней страницей");
-    Console.WriteLine();
-    Console.WriteLine();
-    Console.WriteLine("Для нового поиска нажмите Enter");
-    Console.WriteLine();
     Console.ReadKey();
 }
 
