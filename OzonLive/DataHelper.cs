@@ -19,26 +19,25 @@ public class DataHelper
 
     public DataHelper()
     {
+        ReadProxyFromFile();
         Console.WriteLine($"Create session with GUID - {_guidSession}");
     }
 
-    public void InitializationDriver()
+    public void InitializationDriver(bool isNewDriver = false)
     {
         var options = new ChromeOptions();
         options.AddArgument("--headless");
         options.AddArgument("--disable-gpu");
         options.AddArgument("--disable-blink-features=AutomationControlled");
 
-        if (_isProxy)
+        if (_isProxy && !isNewDriver)
         {
-            ReadProxyFromFile();
-
             Console.WriteLine($"Проверяем {_proxies[_counterProxy]}");
 
             while (!HttpCheckerWorker(_proxies[_counterProxy]))
             {
                 Console.WriteLine($"Proxy {_proxies[_counterProxy]} не работает");
-                if (_counterProxy == _proxies.Count)
+                if (_counterProxy == _proxies.Count - 1)
                 {
                     _counterProxy = 0;
                 }
@@ -107,7 +106,7 @@ public class DataHelper
             }
 
             var outputData = new List<OutputData>();
-            var numberSearchResult = pageIndex == 1 ? 1 : (pageIndex - 1) * 36;
+            var numberSearchResult = pageIndex == 1 ? 1 : (pageIndex - 1) * 36 - 1;
             foreach (var item in items!)
             {
                 var output = new OutputData();
@@ -157,6 +156,13 @@ public class DataHelper
                 numberSearchResult++;
             }
 
+            if (outputData.Count == 0)
+            {
+                Console.WriteLine($"Программа завершила работу с последней страницей - {pageIndex}");
+                cts.Cancel();
+                return await Task.Run(() => true);
+            }
+            
             await new Writer().WriteToExcel($"{nameRequest}_{_guidSession}", $"page_{pageIndex}", outputData);
             Console.WriteLine($"Конец работы со страницей {pageIndex}");
             return await Task.Run(() => true);
@@ -186,7 +192,7 @@ public class DataHelper
         if (isNewDriver)
         {
             _driver.Dispose();
-            InitializationDriver();
+            InitializationDriver(isNewDriver);
         }
 
         _driver.Navigate().GoToUrl("https://www.ozon.ru/api/entrypoint-api.bx/page/json/v2?url=" +
@@ -196,7 +202,7 @@ public class DataHelper
                                    "&layout_container=categorySearchMegapagination" +
                                    $"&layout_page_index={pageIndex}&page={pageIndex}");
 
-        Thread.Sleep(new Random().Next(100, 500));
+        Thread.Sleep(new Random().Next(3000, 5000));
 
         var test = _driver.FindElement(By.TagName("pre"));
         try
