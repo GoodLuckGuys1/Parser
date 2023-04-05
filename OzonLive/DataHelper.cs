@@ -1,8 +1,10 @@
-﻿using Newtonsoft.Json;
-using OpenQA.Selenium;
+﻿using System.Diagnostics;
+using Newtonsoft.Json;
 using OpenQA.Selenium.Chrome;
 using Newtonsoft.Json.Linq;
+using OpenQA.Selenium;
 using UndetectedChromeDriver = SeleniumUndetectedChromeDriver.UndetectedChromeDriver;
+using xNet;
 
 namespace OzonLive;
 
@@ -13,23 +15,41 @@ public class DataHelper
     private bool _isProxy = false;
     private readonly List<string> _proxies = new List<string>();
     private readonly string _pathToFile = AppDomain.CurrentDomain.BaseDirectory + '\\';
+    private int _counterProxy;
 
     public DataHelper()
     {
         Console.WriteLine($"Create session with GUID - {_guidSession}");
     }
 
-    public void InitializationDriver(bool isResetProxy)
+    public void InitializationDriver()
     {
         var options = new ChromeOptions();
-        options.AddArgument("--disable-blink-features=AutomationControlled");
-
-        if (isResetProxy)
+        options.AddArgument("--disable-blink-features=AutomationControlled"); 
+        //options.AddArgument("--headless");
+        if (_isProxy)
         {
             ReadProxyFromFile();
-            var rnd = new Random();
-            var proxy = _proxies.ElementAt(rnd.Next(_proxies.Count));
-            options.AddArgument($"--proxy-server={proxy}");
+
+            Console.WriteLine($"Работаем на proxy {_proxies[_counterProxy]}");
+
+            while (!HttpCheckerWorker(_proxies[_counterProxy]))
+            {
+                if (_counterProxy == _proxies.Count)
+                {
+                    _counterProxy = 0;
+                }
+
+                Console.WriteLine($"Proxy {_proxies[_counterProxy]} не работает");
+                Console.WriteLine($"Переключаем прокси");
+                _counterProxy++;
+                Console.WriteLine($"Работаем на proxy {_proxies[_counterProxy]}");
+            }
+
+
+            options.AddArgument($"--proxy-server={_proxies[_counterProxy]}");
+            options.PageLoadStrategy = PageLoadStrategy.Normal;
+            _counterProxy++;
         }
 
         options.AddArgument(
@@ -37,6 +57,12 @@ public class DataHelper
 
         _driver = UndetectedChromeDriver.Create(
             driverExecutablePath: $"{_pathToFile}\\chromedriver.exe",
+            configureService: service =>
+            {
+                service.EnableVerboseLogging = false;
+                service.SuppressInitialDiagnosticInformation = true;
+                service.HideCommandPromptWindow = true;
+            },
             options: options
         );
     }
@@ -52,18 +78,17 @@ public class DataHelper
 
             var items = ParceStartData(false, pageIndex, nameRequest);
 
-            if (pageIndex % 110 == 0)
+            if (pageIndex % 10 == 0)
             {
-                _isProxy = !_isProxy;
+                _isProxy = true;
                 _driver.Dispose();
-                InitializationDriver(_isProxy);
-                
+                InitializationDriver();
             }
 
             var counterReload = 1;
             while (items == null && counterReload <= maxCountReloadDriver)
             {
-                Thread.Sleep(100);
+                Thread.Sleep(new Random().Next(1000, 3000));
                 Console.WriteLine(
                     $"Задержка загрузки данных со страницы {pageIndex}, перезагрузка драйвера. Попытка {counterReload} из {maxCountReloadDriver}");
                 items = ParceStartData(true, pageIndex, nameRequest);
@@ -134,16 +159,22 @@ public class DataHelper
         }
         catch (NoSuchElementException)
         {
-            Console.WriteLine($"Конец работы со страницей {pageIndex} - последняя страница");
-            cts.Cancel();
-            throw;
+            Console.WriteLine("Проверка cloudFlare не пройдена");
+            Console.WriteLine("Переключаем proxy");
+            _isProxy = true;
+            _driver.Dispose();
+            InitializationDriver();
+            await ParsePageAsync(pageIndex, nameRequest, maxCountReloadDriver, cts);
         }
+
         catch (Exception e)
         {
             Console.WriteLine($"Конец работы со страницей {pageIndex} c ошибкой");
             Console.WriteLine(e);
             throw;
         }
+
+        return await Task.Run(() => true);
     }
 
     private JToken? ParceStartData(bool isNewDriver, int pageIndex = 0, string nameRequest = "")
@@ -151,7 +182,7 @@ public class DataHelper
         if (isNewDriver)
         {
             _driver.Dispose();
-            InitializationDriver(false);
+            InitializationDriver();
         }
 
         _driver.Navigate().GoToUrl("https://www.ozon.ru/api/entrypoint-api.bx/page/json/v2?url=" +
@@ -161,27 +192,40 @@ public class DataHelper
                                    "&layout_container=categorySearchMegapagination" +
                                    $"&layout_page_index={pageIndex}&page={pageIndex}");
 
-        Thread.Sleep(100);
+        Thread.Sleep(new Random().Next(100, 500));
 
         var test = _driver.FindElement(By.TagName("pre"));
-
-        var step1 = JsonConvert.DeserializeObject<JObject>(test.Text);
-        var globalJsonObject = JObject.Parse(step1?.ToString()!);
-        var widgetState = (JObject) globalJsonObject["widgetStates"]!;
-        var searchResultsPropertyName =
-            widgetState.Properties().FirstOrDefault(x => x.Name.Contains("searchResultsV2"))?.Name;
-        var searchResultsItem = JObject.Parse(widgetState[searchResultsPropertyName!]?.ToString()!);
-        return searchResultsItem["items"];
+        try
+        {
+            var step1 = JsonConvert.DeserializeObject<JObject>(test.Text);
+            var globalJsonObject = JObject.Parse(step1?.ToString()!);
+            var widgetState = (JObject) globalJsonObject["widgetStates"]!;
+            var searchResultsPropertyName =
+                widgetState.Properties().FirstOrDefault(x => x.Name.Contains("searchResultsV2"))?.Name;
+            var searchResultsItem = JObject.Parse(widgetState[searchResultsPropertyName!]?.ToString()!);
+            if (!searchResultsItem.HasValues && _isProxy)
+            {
+                Console.WriteLine("С этого proxy не приходят данные");
+                return ParceStartData(true, pageIndex, nameRequest);
+            }
+            return searchResultsItem["items"];
+            
+        }
+        catch
+        {
+            ;
+            throw;
+        }
     }
 
     private void ReadProxyFromFile()
     {
-        
         try
         {
             using var reader = new StreamReader($"{_pathToFile}\\proxiesList.txt");
+
             var proxy = reader.ReadLine();
-            while (proxy !=  null)
+            while (proxy != null)
             {
                 _proxies.Add(proxy);
                 proxy = reader.ReadLine();
@@ -190,6 +234,35 @@ public class DataHelper
         catch (Exception ex)
         {
             Console.WriteLine(ex);
+        }
+    }
+
+    private bool HttpCheckerWorker(string proxy) // Чекер HTTP прокси
+    {
+        try
+        {
+            var checkerHttpRequest = new HttpRequest(); // Создаю запрос
+            checkerHttpRequest.UserAgent = Http.ChromeUserAgent(); // Задаю параметр UserAgent
+            checkerHttpRequest.KeepAlive = false;
+            checkerHttpRequest.ConnectTimeout = 1000; // Задаю Timeout подключения к ресурсу делёный на 2, так как таймаут подключения к прокси отдельный
+            checkerHttpRequest.Proxy = HttpProxyClient.Parse(proxy); // Задаю прокси
+            checkerHttpRequest.Proxy.ConnectTimeout = 1000; // Задаю Timeout подключения к прокси
+            checkerHttpRequest.IgnoreProtocolErrors = true;
+            try
+            {
+                checkerHttpRequest.Get("https://www.google.com");
+                checkerHttpRequest.Close();
+                checkerHttpRequest.Dispose();
+                return checkerHttpRequest.Response.IsOK;
+            }
+            catch (Exception ex) // Отлавливаю остальные исключения
+            {
+                return false;
+            }
+        }
+        catch
+        {
+            return false;
         }
     }
 }

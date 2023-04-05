@@ -5,7 +5,7 @@ try
 {
     while (true)
     {
-        Console.WriteLine("Введите ключевые слова для поиска::");
+        Console.WriteLine("Введите ключевые слова для поиска:");
         var nameRequest = Console.ReadLine();
         while (string.IsNullOrEmpty(nameRequest))
         {
@@ -45,7 +45,7 @@ try
 
         var counter = 1;
         var dataHelper = new DataHelper();
-        dataHelper.InitializationDriver(false);
+        dataHelper.InitializationDriver();
         var tasks = new List<Task>();
         var cts = new CancellationTokenSource();
         if (maxNumberInt == 0)
