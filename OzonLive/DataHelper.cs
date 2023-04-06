@@ -84,6 +84,7 @@ public class DataHelper
             if (pageIndex % 10 == 0)
             {
                 _isProxy = true;
+                _driver.Close();
                 _driver.Dispose();
                 InitializationDriver();
             }
@@ -172,6 +173,7 @@ public class DataHelper
             Console.WriteLine("Проверка cloudFlare не пройдена");
             Console.WriteLine("Переключаем proxy");
             _isProxy = true;
+            _driver.Close();
             _driver.Dispose();
             InitializationDriver();
             await ParsePageAsync(pageIndex, nameRequest, maxCountReloadDriver, cts);
@@ -191,6 +193,7 @@ public class DataHelper
     {
         if (isNewDriver)
         {
+            _driver.Close();
             _driver.Dispose();
             InitializationDriver(isNewDriver);
         }
