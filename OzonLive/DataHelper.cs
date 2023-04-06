@@ -166,6 +166,8 @@ public class DataHelper
             
             await new Writer().WriteToExcel($"{nameRequest}_{_guidSession}", $"page_{pageIndex}", outputData);
             Console.WriteLine($"Конец работы со страницей {pageIndex}");
+            _driver.Close();
+            _driver.Dispose();
             return await Task.Run(() => true);
         }
         catch (NoSuchElementException)
