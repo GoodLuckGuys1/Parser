@@ -161,13 +161,13 @@ public class DataHelper
             {
                 Console.WriteLine($"Программа завершила работу с последней страницей - {pageIndex}");
                 cts.Cancel();
+                _driver.Close();
+                _driver.Dispose();
                 return await Task.Run(() => true);
             }
             
             await new Writer().WriteToExcel($"{nameRequest}_{_guidSession}", $"page_{pageIndex}", outputData);
             Console.WriteLine($"Конец работы со страницей {pageIndex}");
-            _driver.Close();
-            _driver.Dispose();
             return await Task.Run(() => true);
         }
         catch (NoSuchElementException)
